@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DSSMA Pátio — Painel de Realização</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg: #F3F4F1;
+    --panel: #FFFFFF;
+    --ink: #14231E;
+    --ink-soft: #55635D;
+    --line: #E3E6E1;
+    --orange: #E9542A;
+    --orange-soft: #FCE7E0;
+    --green: #1E8E5A;
+    --green-soft: #E4F4EC;
+    --amber: #B8790B;
+    --amber-soft: #FBEFD8;
+    --red: #C4392B;
+    --red-soft: #FBE4E1;
+    --navy: #1D2E3D;
+    --radius: 14px;
+    --shadow: 0 1px 2px rgba(20,35,30,0.04), 0 6px 20px rgba(20,35,30,0.05);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family: "Inter", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 24px 80px;}
+
+  /* Header */
+  .topbar{
+    display:flex; justify-content:space-between; align-items:flex-start;
+    gap:20px; flex-wrap:wrap; margin-bottom:26px;
+  }
+  .brand-row{display:flex;align-items:center;gap:12px;}
+  .brand-mark{
+    width:38px;height:38px;border-radius:10px;background:var(--orange);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:15px;
+    flex-shrink:0;
+  }
+  h1{font-size:22px;margin:0;letter-spacing:-0.01em;font-weight:700;}
+  .subtitle{color:var(--ink-soft);font-size:13.5px;margin-top:3px;}
+  .top-actions{display:flex;flex-direction:column;align-items:flex-end;gap:8px;}
+  .updated-pill{
+    font-size:12.5px;color:var(--ink-soft);background:var(--panel);border:1px solid var(--line);
+    padding:6px 12px;border-radius:100px;display:flex;align-items:center;gap:6px;
+  }
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;}
+  .btn-upload{
+    background:var(--navy); color:#fff; border:none; padding:10px 16px; border-radius:10px;
+    font-size:13.5px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px;
+    transition: transform .12s ease, background .12s ease;
+  }
+  .btn-upload:hover{background:#142230;}
+  .btn-upload:active{transform:scale(0.98);}
+  input[type=file]{display:none;}
+
+  /* KPI cards */
+  .kpi-grid{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:24px;
+  }
+  @media (max-width:900px){.kpi-grid{grid-template-columns:repeat(2,1fr);}}
+  .kpi{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:18px 18px 16px; box-shadow:var(--shadow);
+  }
+  .kpi-label{font-size:12px;color:var(--ink-soft);font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
+  .kpi-value{font-size:30px;font-weight:800;margin-top:8px;letter-spacing:-0.02em;}
+  .kpi-sub{font-size:12.5px;margin-top:6px;color:var(--ink-soft);}
+  .kpi-sub.up{color:var(--green);font-weight:600;}
+  .kpi-sub.down{color:var(--red);font-weight:600;}
+  .kpi-week-tag{
+    display:inline-block; font-size:11px; font-weight:700; color:var(--orange); background:var(--orange-soft);
+    padding:2px 8px; border-radius:100px; margin-top:2px;
+  }
+
+  /* Panels */
+  .panel{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:20px 22px; box-shadow:var(--shadow); margin-bottom:20px;
+  }
+  .panel-head{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px; flex-wrap:wrap; gap:6px;}
+  .panel-title{font-size:15.5px; font-weight:700;}
+  .panel-note{font-size:12.5px; color:var(--ink-soft);}
+
+  .grid-2{display:grid; grid-template-columns: 1.3fr 1fr; gap:20px;}
+  @media (max-width:900px){.grid-2{grid-template-columns:1fr;}}
+
+  canvas{max-width:100%;}
+
+  /* Heatmap */
+  .heatmap-scroll{overflow-x:auto;}
+  table.heatmap{border-collapse:collapse; width:100%; font-size:12.5px;}
+  table.heatmap th, table.heatmap td{padding:7px 8px; text-align:center; white-space:nowrap;}
+  table.heatmap th{color:var(--ink-soft); font-weight:600; font-size:11.5px;}
+  table.heatmap td.unit-name{text-align:left; font-weight:600; color:var(--ink); position:sticky; left:0; background:var(--panel);}
+  table.heatmap td.unit-city{display:block; font-weight:400; color:var(--ink-soft); font-size:11px;}
+  .cell{
+    width:40px;height:26px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;
+    font-size:11px;font-weight:700;color:#fff;
+  }
+
+  #rankChartWrap{ position:relative; }
+
+  /* Leader detail */
+  .unit-accordion{border:1px solid var(--line); border-radius:12px; margin-bottom:8px; overflow:hidden;}
+  .unit-summary{
+    display:flex;justify-content:space-between;align-items:center;padding:12px 16px;
+    cursor:pointer; background:#FAFAF8; user-select:none;
+  }
+  .unit-summary:hover{background:#F4F4F0;}
+  .unit-summary-left{display:flex;align-items:center;gap:10px;}
+  .unit-summary-title{font-weight:700;font-size:13.5px;}
+  .unit-summary-city{font-size:11.5px;color:var(--ink-soft);}
+  .badge{font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:100px;}
+  .badge.ok{background:var(--green-soft);color:var(--green);}
+  .badge.warn{background:var(--amber-soft);color:var(--amber);}
+  .badge.bad{background:var(--red-soft);color:var(--red);}
+  .chevron{transition:transform .15s ease; color:var(--ink-soft);}
+  .unit-body{padding:0 16px 14px; display:none;}
+  .unit-accordion.open .unit-body{display:block;}
+  .unit-accordion.open .chevron{transform:rotate(180deg);}
+  .leader-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--line);font-size:13px;}
+  .leader-row:first-child{border-top:none;}
+  .status-tag{font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:100px;display:inline-flex;align-items:center;gap:5px;}
+  .status-tag.done{background:var(--green-soft);color:var(--green);}
+  .status-tag.pending{background:var(--red-soft);color:var(--red);}
+  .status-tag.na{background:#EFEFEC;color:var(--ink-soft);}
+
+  .empty-note{color:var(--ink-soft);font-size:13px;padding:20px;text-align:center;}
+  footer{text-align:center;color:var(--ink-soft);font-size:12px;margin-top:30px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="brand-row">
+      <div class="brand-mark">DS</div>
+      <div>
+        <h1>DSSMA Pátio</h1>
+        <div class="subtitle">Painel de realização — Diálogo Semanal de Segurança e Meio Ambiente</div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <div class="updated-pill"><span class="dot"></span><span id="updatedText">carregando…</span></div>
+      <button class="btn-upload" onclick="document.getElementById('fileInput').click()">
+        ⤴ Atualizar dados (Excel)
+      </button>
+      <input type="file" id="fileInput" accept=".xlsx,.xls">
+    </div>
+  </div>
+
+  <div class="kpi-grid" id="kpiGrid"></div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title">Ranking por unidade — semana atual</div>
+      <div class="panel-note" id="rankWeekNote"></div>
+    </div>
+    <div id="rankChartWrap"><canvas id="rankChart"></canvas></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title">Mapa de calor — unidade × semana</div>
+      <div class="panel-note">% de líderes que realizaram o DSSMA em cada semana</div>
+    </div>
+    <div class="heatmap-scroll">
+      <table class="heatmap" id="heatmapTable"></table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title">Detalhe por líder — semana atual</div>
+      <div class="panel-note">Clique numa unidade para expandir</div>
+    </div>
+    <div id="unitAccordions"></div>
+  </div>
+
+  <footer>Esboço inicial do painel DSSMA Pátio — feito para revisão e ajustes.</footer>
+</div>
+
+<script>
+/* ============ DADOS EMBUTIDOS (última planilha enviada) ============ */
+const DEFAULT_WORKBOOK = {"Farol": [["SEMANA", "MÊS", "RJ2", "SP5", "SP2", "SP6", "SP7", "SP8", "SP25", "BA2", "PE2", "GO2", "PR1", "RJ1", "RESULTADO MENSAL BR"], [13, "março/2026", 1, 0, 0.6666666667, 0.6666666667, 0.6666666667, 0.6666666667, 0.6666666667, 0, 0, 0, 0, 0, 0.619047619], [14, "abril/2026", 1, 1, 1, 1, 0.6666666667, 0.75, 1, 0, 0, 0, 0, 0, 0.9166666667], [15, "abril/2026", 1, 1, 0.3333333333, 1, 0.6666666667, 1, 1, 0, 0, 0, 0, 0, 0.8571428571], [16, "abril/2026", 1, 1, 1, 1, 0.6666666667, 1, 1, 0, 0, 0, 0, 0, 0.9523809524], [17, "abril/2026", 0.6666666667, 1, 1, 1, 0.6666666667, 1, 0.6666666667, 0, 0, 0, 0, 0, 0.8571428571], [18, "abril/2026", 1, 1, 1, 1, 0.6666666667, 1, 1, 1, 0.3333333333, 0.3333333333, 1, 0, 0.8484848485], [19, "maio/2026", 1, 1, 1, 1, 0.6666666667, 1, 1, 0.6666666667, 0.6666666667, 0.3333333333, 1, 0, 0.8484848485], [20, "maio/2026", 1, 1, 1, 1, 0.6666666667, 1, 1, 0.6666666667, 0.6666666667, 1, 1, 1, 0.9090909091], [21, "maio/2026", 1, 1, 0.6666666667, 1, 1, 1, 1, 0.3333333333, 0.6666666667, 1, 1, 1, 0.8787878788], [22, "maio/2026", 1, 1, 0.6666666667, 1, 1, 0.75, 1, 0.3333333333, 1, 1, 1, 0.6666666667, 0.8863636364], [23, "junho/2026", 1, 1, 1, 1, 1, 0.75, 1, 0, 0.6666666667, 1, 1, 1, 0.8560606061], [24, "junho/2026", 1, 1, 0.6666666667, 1, 0.3333333333, 0.75, 1, 0.6666666667, 0.6666666667, 1, 1, 1, 0.8257575758], [25, "junho/2026", 1, 0, 0.6666666667, 0.6666666667, 1, 0.75, 1, 1, 0.6666666667, 1, 0.5, 1, 0.75], [26, "junho/2026", 1, 1, 1, 1, 1, 0.75, 1, 1, 1, 1, 0.5, 1, 0.9318181818], [27, "julho/2026", 0.6666666667, 0.5, 0.6666666667, 1, 1, 0.75, 1, 0.3333333333, 0, 0.3333333333, 0.5, 1, null], [28, "julho/2026", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null], [29, "julho/2026", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null], [30, "julho/2026", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null], [31, "julho/2026", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null], [32, "agosto/2026", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null], [33, "agosto/2026", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null], [34, "agosto/2026", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null], [35, "agosto/2026", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null], [36, "setembro/2026", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null], [37, "setembro/2026", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null], [38, "setembro/2026", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null], [39, "setembro/2026", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null], [40, "setembro/2026", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null], [41, "outubro/2026", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null], [42, "outubro/2026", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null], [43, "outubro/2026", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null], [44, "outubro/2026", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null], [45, "novembro/2026", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null], [46, "novembro/2026", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null], [47, "novembro/2026", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null], [48, "novembro/2026", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null], [49, "dezembro/2026", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null], [50, "dezembro/2026", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null], [51, "dezembro/2026", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null], [52, "dezembro/2026", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, null]], "Relação de Líderes Pátio": [["SOC", "SORT CODE", "NOME DO LÍDER", "E-MAIL CORPORATIVO"], ["RJ2", "Duque de Caxias", "Luciana Lopes da Silva Oliveira", "luciana.oliveira@shopeemobile-external.com"], ["RJ2", "Duque de Caxias", "Luiz Antonio de Lima Rosa Júnior", "luiz.rjunior@shopeemobile-external.com"], ["RJ2", "Duque de Caxias", "Claudio Rogério Moreira dos Santos", "claudio.santos@shopeemobile-external.com"], ["SP2", "Santana do Parnaíba", "Gisele Silva", "gisele.csilva@shopee.com"], ["SP2", "Santana do Parnaíba", "Eduardo Barros Dos Santos", "eduardo.bsantos@shopee.com"], ["SP2", "Santana do Parnaíba", "Eduardo Jacometti", "eduardo.jacometti@shopee.com"], ["SP6", "Guarulhos", "Ralph Silva", "ralph.silva@shopee.com"], ["SP6", "Guarulhos", "Mirely Valerya", "mirely.sales@shopee.com"], ["SP6", "Guarulhos", "Geovanny Gonçalves", "geovanny.silva@shopee.com"], ["SP8", "São Bernardo de Campo", "Raphael Castro", "raphael.lsilva@shopee.com"], ["SP8", "São Bernardo de Campo", "Renan Gomes", "renan.gferreira@shopee.com"], ["SP8", "São Bernardo de Campo", "Jefferson Ivo", "jefferson.ivo@shopee.com"], ["SP8", "São Bernardo de Campo", "Ed Fenix", "ed.fenix@shopeemobile-external.com"], ["SP25", "Guarulhos/Cumbica", "Felix Santos", "felix.santos@shopeemobile-external.com"], ["SP25", "Guarulhos/Cumbica", "Guilherme Gonçalves de Oliveira", "guilherme.goliveira@shopeemobile-external.com"], ["SP25", "Guarulhos/Cumbica", "Fabio Serafim", "fabio.serafim@shopee.com"], ["PR1", null, null, null], ["PR1", null, null, null], ["PR1", null, null, null]], "RJ2": [["Nº DA SEMANA", "PERÍODO DE VIGÊNCIA", "Luciana Lopes da Silva Oliveira", "Luiz Antonio de Lima Rosa Júnior", "Claudio Rogério Moreira dos Santos", "CONCLUIDO", "ACUMULADO MENSAL"], [null, null, "luciana.oliveira@shopeemobile-external.com", "luiz.antonio@shopee.com", "claudio.santos@shopeemobile-external.com", null, null], [1, "W1 - 29/12/2025 a 03/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [2, "W2 - 05/01/2026 a 10/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [3, "W3 - 12/01/2026 a 17/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [4, "W4 - 19/01/2026 a 24/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [5, "W5 - 26/01/2026 a 31/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [6, "W6 - 02/02/2026 a 07/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [7, "W7 - 09/02/2026 a 14/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [8, "W8 - 16/02/2026 a 21/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [9, "W9 - 23/02/2026 a 28/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [10, "W10 - 02/03/2026 a 07/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [11, "W11 - 09/03/2026 a 14/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [12, "W12 - 16/03/2026 a 21/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [13, "W13 - 23/03/2026 a 28/03/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [14, "W14 - 30/03/2026 a 04/04/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [15, "W15 - 06/04/2026 a 11/04/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [16, "W16 - 13/04/2026 a 18/04/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [17, "W17 - 20/04/2026 a 25/04/2026", "NÃO REALIZADO", "REALIZADO", "REALIZADO", 0.6666666667, null], [18, "W18 - 27/04/2026 a 02/05/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [19, "W19 - 04/05/2026 a 09/05/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [20, "W20 - 11/05/2026 a 16/05/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [21, "W21 - 18/05/2026 a 23/05/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [22, "W22 - 25/05/2026 a 30/05/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [23, "W23 - 01/06/2026 a 06/06/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [24, "W24 - 08/06/2026 a 13/06/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [25, "W25 - 15/06/2026 a 20/06/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [26, "W26 - 22/06/2026 a 27/06/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [27, "W27 - 29/06/2026 a 04/07/2026", "NÃO REALIZADO", "REALIZADO", "REALIZADO", 0.6666666667, null], [28, "W28 - 06/07/2026 a 11/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [29, "W29 - 13/07/2026 a 18/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [30, "W30 - 20/07/2026 a 25/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [31, "W31 - 27/07/2026 a 01/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [32, "W32 - 03/08/2026 a 08/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [33, "W33 - 10/08/2026 a 15/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [34, "W34 - 17/08/2026 a 22/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [35, "W35 - 24/08/2026 a 29/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [36, "W36 - 31/08/2026 a 05/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [37, "W37 - 07/09/2026 a 12/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [38, "W38 - 14/09/2026 a 19/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [39, "W39 - 21/09/2026 a 26/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [40, "W40 - 28/09/2026 a 03/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [41, "W41 - 05/10/2026 a 10/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [42, "W42 - 12/10/2026 a 17/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [43, "W43 - 19/10/2026 a 24/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [44, "W44 - 26/10/2026 a 31/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [45, "W45 - 02/11/2026 a 07/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [46, "W46 - 09/11/2026 a 14/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [47, "W47 - 16/11/2026 a 21/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [48, "W48 - 23/11/2026 a 28/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [49, "W49 - 30/11/2026 a 05/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [50, "W50 - 07/12/2026 a 12/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [51, "W51 - 14/12/2026 a 19/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [52, "W52 - 21/12/2026 a 26/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null]], "SP2": [["Nº DA SEMANA", "PERÍODO DE VIGÊNCIA", "Gisele Silva", "Eduardo Barros Dos Santos", "Eduardo Jacometti", "CONCLUIDO", "ACUMULADO MENSAL"], [null, null, "gisele.csilva@shopee.com", "eduardo.bsantos@shopee.com", "eduardo.jacometti@shopee.com", null, null], [1, "W1 - 29/12/2025 a 03/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [2, "W2 - 05/01/2026 a 10/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [3, "W3 - 12/01/2026 a 17/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [4, "W4 - 19/01/2026 a 24/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [5, "W5 - 26/01/2026 a 31/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [6, "W6 - 02/02/2026 a 07/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [7, "W7 - 09/02/2026 a 14/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [8, "W8 - 16/02/2026 a 21/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [9, "W9 - 23/02/2026 a 28/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [10, "W10 - 02/03/2026 a 07/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [11, "W11 - 09/03/2026 a 14/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [12, "W12 - 16/03/2026 a 21/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [13, "W13 - 23/03/2026 a 28/03/2026", "REALIZADO", "REALIZADO", "NÃO REALIZADO", 0.6666666667, null], [14, "W14 - 30/03/2026 a 04/04/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [15, "W15 - 06/04/2026 a 11/04/2026", "REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0.3333333333, null], [16, "W16 - 13/04/2026 a 18/04/2026", "REALIZADO", "REALIZADO", null, 1, null], [17, "W17 - 20/04/2026 a 25/04/2026", "REALIZADO", "REALIZADO", null, 1, null], [18, "W18 - 27/04/2026 a 02/05/2026", "REALIZADO", "REALIZADO", null, 1, null], [19, "W19 - 04/05/2026 a 09/05/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [20, "W20 - 11/05/2026 a 16/05/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [21, "W21 - 18/05/2026 a 23/05/2026", "REALIZADO", "NÃO REALIZADO", "REALIZADO", 0.6666666667, null], [22, "W22 - 25/05/2026 a 30/05/2026", "REALIZADO", "NÃO REALIZADO", "REALIZADO", 0.6666666667, null], [23, "W23 - 01/06/2026 a 06/06/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [24, "W24 - 08/06/2026 a 13/06/2026", "NÃO REALIZADO", "REALIZADO", "REALIZADO", 0.6666666667, null], [25, "W25 - 15/06/2026 a 20/06/2026", "REALIZADO", "REALIZADO", "NÃO REALIZADO", 0.6666666667, null], [26, "W26 - 22/06/2026 a 27/06/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [27, "W27 - 29/06/2026 a 04/07/2026", "REALIZADO", "REALIZADO", "NÃO REALIZADO", 0.6666666667, null], [28, "W28 - 06/07/2026 a 11/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [29, "W29 - 13/07/2026 a 18/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [30, "W30 - 20/07/2026 a 25/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [31, "W31 - 27/07/2026 a 01/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [32, "W32 - 03/08/2026 a 08/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [33, "W33 - 10/08/2026 a 15/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [34, "W34 - 17/08/2026 a 22/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [35, "W35 - 24/08/2026 a 29/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [36, "W36 - 31/08/2026 a 05/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [37, "W37 - 07/09/2026 a 12/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [38, "W38 - 14/09/2026 a 19/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [39, "W39 - 21/09/2026 a 26/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [40, "W40 - 28/09/2026 a 03/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [41, "W41 - 05/10/2026 a 10/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [42, "W42 - 12/10/2026 a 17/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [43, "W43 - 19/10/2026 a 24/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [44, "W44 - 26/10/2026 a 31/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [45, "W45 - 02/11/2026 a 07/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [46, "W46 - 09/11/2026 a 14/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [47, "W47 - 16/11/2026 a 21/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [48, "W48 - 23/11/2026 a 28/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [49, "W49 - 30/11/2026 a 05/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [50, "W50 - 07/12/2026 a 12/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [51, "W51 - 14/12/2026 a 19/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [52, "W52 - 21/12/2026 a 26/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null]], "SP5": [["Nº DA SEMANA", "PERÍODO DE VIGÊNCIA", "Yago Felix", "Rafael Almeida", "Em contratação", "CONCLUIDO", "ACUMULADO MENSAL"], [null, null, "yago.felix@shopee.com", "rafael.almeida@shopeemobile-external.com", "Em contratação", null, null], [1, "W1 - 29/12/2025 a 03/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [2, "W2 - 05/01/2026 a 10/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [3, "W3 - 12/01/2026 a 17/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [4, "W4 - 19/01/2026 a 24/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [5, "W5 - 26/01/2026 a 31/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [6, "W6 - 02/02/2026 a 07/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [7, "W7 - 09/02/2026 a 14/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [8, "W8 - 16/02/2026 a 21/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [9, "W9 - 23/02/2026 a 28/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [10, "W10 - 02/03/2026 a 07/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [11, "W11 - 09/03/2026 a 14/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [12, "W12 - 16/03/2026 a 21/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [13, "W13 - 23/03/2026 a 28/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "-", 0, null], [14, "W14 - 30/03/2026 a 04/04/2026", "REALIZADO", "REALIZADO", "-", 1, null], [15, "W15 - 06/04/2026 a 11/04/2026", "REALIZADO", "REALIZADO", "-", 1, null], [16, "W16 - 13/04/2026 a 18/04/2026", "REALIZADO", "REALIZADO", "-", 1, null], [17, "W17 - 20/04/2026 a 25/04/2026", "REALIZADO", "REALIZADO", "-", 1, null], [18, "W18 - 27/04/2026 a 02/05/2026", "REALIZADO", "REALIZADO", "-", 1, null], [19, "W19 - 04/05/2026 a 09/05/2026", "REALIZADO", "REALIZADO", null, 1, null], [20, "W20 - 11/05/2026 a 16/05/2026", "REALIZADO", "REALIZADO", null, 1, null], [21, "W21 - 18/05/2026 a 23/05/2026", "REALIZADO", "REALIZADO", null, 1, null], [22, "W22 - 25/05/2026 a 30/05/2026", "REALIZADO", "REALIZADO", null, 1, null], [23, "W23 - 01/06/2026 a 06/06/2026", "REALIZADO", "REALIZADO", null, 1, null], [24, "W24 - 08/06/2026 a 13/06/2026", "REALIZADO", "REALIZADO", null, 1, null], [25, "W25 - 15/06/2026 a 20/06/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [26, "W26 - 22/06/2026 a 27/06/2026", "REALIZADO", "REALIZADO", null, 1, null], [27, "W27 - 29/06/2026 a 04/07/2026", "REALIZADO", "NÃO REALIZADO", null, 0.5, null], [28, "W28 - 06/07/2026 a 11/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [29, "W29 - 13/07/2026 a 18/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [30, "W30 - 20/07/2026 a 25/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [31, "W31 - 27/07/2026 a 01/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [32, "W32 - 03/08/2026 a 08/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [33, "W33 - 10/08/2026 a 15/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [34, "W34 - 17/08/2026 a 22/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [35, "W35 - 24/08/2026 a 29/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [36, "W36 - 31/08/2026 a 05/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [37, "W37 - 07/09/2026 a 12/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [38, "W38 - 14/09/2026 a 19/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [39, "W39 - 21/09/2026 a 26/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [40, "W40 - 28/09/2026 a 03/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [41, "W41 - 05/10/2026 a 10/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [42, "W42 - 12/10/2026 a 17/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [43, "W43 - 19/10/2026 a 24/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [44, "W44 - 26/10/2026 a 31/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [45, "W45 - 02/11/2026 a 07/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [46, "W46 - 09/11/2026 a 14/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [47, "W47 - 16/11/2026 a 21/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [48, "W48 - 23/11/2026 a 28/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [49, "W49 - 30/11/2026 a 05/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [50, "W50 - 07/12/2026 a 12/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [51, "W51 - 14/12/2026 a 19/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [52, "W52 - 21/12/2026 a 26/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null]], "SP6": [["Nº DA SEMANA", "PERÍODO DE VIGÊNCIA", "Ralph Silva", "Mirely Valerya", "Geovanny Gonçalves", "CONCLUIDO", "ACUMULADO MENSAL"], [null, null, "ralph.silva@shopee.com", "mirely.sales@shopee.com", "geovanny.silva@shopee.com", null, null], [1, "W1 - 29/12/2025 a 03/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [2, "W2 - 05/01/2026 a 10/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [3, "W3 - 12/01/2026 a 17/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [4, "W4 - 19/01/2026 a 24/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [5, "W5 - 26/01/2026 a 31/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [6, "W6 - 02/02/2026 a 07/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [7, "W7 - 09/02/2026 a 14/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [8, "W8 - 16/02/2026 a 21/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [9, "W9 - 23/02/2026 a 28/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [10, "W10 - 02/03/2026 a 07/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [11, "W11 - 09/03/2026 a 14/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [12, "W12 - 16/03/2026 a 21/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [13, "W13 - 23/03/2026 a 28/03/2026", "NÃO REALIZADO", "REALIZADO", "REALIZADO", 0.6666666667, null], [14, "W14 - 30/03/2026 a 04/04/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [15, "W15 - 06/04/2026 a 11/04/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [16, "W16 - 13/04/2026 a 18/04/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [17, "W17 - 20/04/2026 a 25/04/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [18, "W18 - 27/04/2026 a 02/05/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [19, "W19 - 04/05/2026 a 09/05/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [20, "W20 - 11/05/2026 a 16/05/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [21, "W21 - 18/05/2026 a 23/05/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [22, "W22 - 25/05/2026 a 30/05/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [23, "W23 - 01/06/2026 a 06/06/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [24, "W24 - 08/06/2026 a 13/06/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [25, "W25 - 15/06/2026 a 20/06/2026", "REALIZADO", "NÃO REALIZADO", "REALIZADO", 0.6666666667, null], [26, "W26 - 22/06/2026 a 27/06/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [27, "W27 - 29/06/2026 a 04/07/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [28, "W28 - 06/07/2026 a 11/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [29, "W29 - 13/07/2026 a 18/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [30, "W30 - 20/07/2026 a 25/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [31, "W31 - 27/07/2026 a 01/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [32, "W32 - 03/08/2026 a 08/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [33, "W33 - 10/08/2026 a 15/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [34, "W34 - 17/08/2026 a 22/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [35, "W35 - 24/08/2026 a 29/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [36, "W36 - 31/08/2026 a 05/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [37, "W37 - 07/09/2026 a 12/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [38, "W38 - 14/09/2026 a 19/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [39, "W39 - 21/09/2026 a 26/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [40, "W40 - 28/09/2026 a 03/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [41, "W41 - 05/10/2026 a 10/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [42, "W42 - 12/10/2026 a 17/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [43, "W43 - 19/10/2026 a 24/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [44, "W44 - 26/10/2026 a 31/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [45, "W45 - 02/11/2026 a 07/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [46, "W46 - 09/11/2026 a 14/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [47, "W47 - 16/11/2026 a 21/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [48, "W48 - 23/11/2026 a 28/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [49, "W49 - 30/11/2026 a 05/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [50, "W50 - 07/12/2026 a 12/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [51, "W51 - 14/12/2026 a 19/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [52, "W52 - 21/12/2026 a 26/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null]], "SP7": [["Nº DA SEMANA", "PERÍODO DE VIGÊNCIA", "Carlos Dalsin", "Luiz A. Ferreira", "Paulo Francisco", "CONCLUIDO", "ACUMULADO MENSAL"], [null, null, "carlos.dalcin@shopee.com", "luiz.fferreira@shopee.com", "paulo.francisco@shopee.com", null, null], [1, "W1 - 29/12/2025 a 03/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [2, "W2 - 05/01/2026 a 10/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [3, "W3 - 12/01/2026 a 17/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [4, "W4 - 19/01/2026 a 24/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [5, "W5 - 26/01/2026 a 31/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [6, "W6 - 02/02/2026 a 07/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [7, "W7 - 09/02/2026 a 14/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [8, "W8 - 16/02/2026 a 21/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [9, "W9 - 23/02/2026 a 28/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [10, "W10 - 02/03/2026 a 07/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [11, "W11 - 09/03/2026 a 14/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [12, "W12 - 16/03/2026 a 21/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [13, "W13 - 23/03/2026 a 28/03/2026", "REALIZADO", "REALIZADO", "NÃO REALIZADO", 0.6666666667, null], [14, "W14 - 30/03/2026 a 04/04/2026", "REALIZADO", "NÃO REALIZADO", "REALIZADO", 0.6666666667, null], [15, "W15 - 06/04/2026 a 11/04/2026", "REALIZADO", "REALIZADO", "NÃO REALIZADO", 0.6666666667, null], [16, "W16 - 13/04/2026 a 18/04/2026", "REALIZADO", "REALIZADO", "NÃO REALIZADO", 0.6666666667, null], [17, "W17 - 20/04/2026 a 25/04/2026", "REALIZADO", "REALIZADO", "NÃO REALIZADO", 0.6666666667, null], [18, "W18 - 27/04/2026 a 02/05/2026", "NÃO REALIZADO", "REALIZADO", "REALIZADO", 0.6666666667, null], [19, "W19 - 04/05/2026 a 09/05/2026", "NÃO REALIZADO", "REALIZADO", "REALIZADO", 0.6666666667, null], [20, "W20 - 11/05/2026 a 16/05/2026", "REALIZADO", "REALIZADO", "NÃO REALIZADO", 0.6666666667, null], [21, "W21 - 18/05/2026 a 23/05/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [22, "W22 - 25/05/2026 a 30/05/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [23, "W23 - 01/06/2026 a 06/06/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [24, "W24 - 08/06/2026 a 13/06/2026", "NÃO REALIZADO", "REALIZADO", "NÃO REALIZADO", 0.3333333333, null], [25, "W25 - 15/06/2026 a 20/06/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [26, "W26 - 22/06/2026 a 27/06/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [27, "W27 - 29/06/2026 a 04/07/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [28, "W28 - 06/07/2026 a 11/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [29, "W29 - 13/07/2026 a 18/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [30, "W30 - 20/07/2026 a 25/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [31, "W31 - 27/07/2026 a 01/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [32, "W32 - 03/08/2026 a 08/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [33, "W33 - 10/08/2026 a 15/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [34, "W34 - 17/08/2026 a 22/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [35, "W35 - 24/08/2026 a 29/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [36, "W36 - 31/08/2026 a 05/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [37, "W37 - 07/09/2026 a 12/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [38, "W38 - 14/09/2026 a 19/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [39, "W39 - 21/09/2026 a 26/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [40, "W40 - 28/09/2026 a 03/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [41, "W41 - 05/10/2026 a 10/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [42, "W42 - 12/10/2026 a 17/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [43, "W43 - 19/10/2026 a 24/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [44, "W44 - 26/10/2026 a 31/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [45, "W45 - 02/11/2026 a 07/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [46, "W46 - 09/11/2026 a 14/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [47, "W47 - 16/11/2026 a 21/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [48, "W48 - 23/11/2026 a 28/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [49, "W49 - 30/11/2026 a 05/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [50, "W50 - 07/12/2026 a 12/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [51, "W51 - 14/12/2026 a 19/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [52, "W52 - 21/12/2026 a 26/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null]], "SP8": [["Nº DA SEMANA", "PERÍODO DE VIGÊNCIA", "Raphael Castro", "Renan Gomes", "Jefferson Ivo", "Ed Fenix", "CONCLUIDO", "ACUMULADO MENSAL"], [null, null, "raphael.lsilva@shopee.com", "renan.gferreira@shopee.com", "jefferson.ivo@shopee.com", "ed.fenix@shopeemobile-external.com", null, null], [1, "W1 - 29/12/2025 a 03/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [2, "W2 - 05/01/2026 a 10/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [3, "W3 - 12/01/2026 a 17/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [4, "W4 - 19/01/2026 a 24/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [5, "W5 - 26/01/2026 a 31/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [6, "W6 - 02/02/2026 a 07/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [7, "W7 - 09/02/2026 a 14/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [8, "W8 - 16/02/2026 a 21/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [9, "W9 - 23/02/2026 a 28/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [10, "W10 - 02/03/2026 a 07/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [11, "W11 - 09/03/2026 a 14/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [12, "W12 - 16/03/2026 a 21/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [13, "W13 - 23/03/2026 a 28/03/2026", "REALIZADO", "REALIZADO", "NÃO REALIZADO", "REALIZADO", 0.6666666667, null], [14, "W14 - 30/03/2026 a 04/04/2026", "REALIZADO", "NÃO REALIZADO", "REALIZADO", "REALIZADO", 0.75, null], [15, "W15 - 06/04/2026 a 11/04/2026", "REALIZADO", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [16, "W16 - 13/04/2026 a 18/04/2026", "REALIZADO", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [17, "W17 - 20/04/2026 a 25/04/2026", "REALIZADO", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [18, "W18 - 27/04/2026 a 02/05/2026", "REALIZADO", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [19, "W19 - 04/05/2026 a 09/05/2026", "REALIZADO", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [20, "W20 - 11/05/2026 a 16/05/2026", "REALIZADO", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [21, "W21 - 18/05/2026 a 23/05/2026", "REALIZADO", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [22, "W22 - 25/05/2026 a 30/05/2026", "NÃO REALIZADO", "REALIZADO", "REALIZADO", "REALIZADO", 0.75, null], [23, "W23 - 01/06/2026 a 06/06/2026", "REALIZADO", "REALIZADO", "NÃO REALIZADO", "REALIZADO", 0.75, null], [24, "W24 - 08/06/2026 a 13/06/2026", "REALIZADO", "REALIZADO", "NÃO REALIZADO", "REALIZADO", 0.75, null], [25, "W25 - 15/06/2026 a 20/06/2026", "REALIZADO", "REALIZADO", "NÃO REALIZADO", "REALIZADO", 0.75, null], [26, "W26 - 22/06/2026 a 27/06/2026", "REALIZADO", "REALIZADO", "NÃO REALIZADO", "REALIZADO", 0.75, null], [27, "W27 - 29/06/2026 a 04/07/2026", "REALIZADO", "REALIZADO", "REALIZADO", "NÃO REALIZADO", 0.75, null], [28, "W28 - 06/07/2026 a 11/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [29, "W29 - 13/07/2026 a 18/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [30, "W30 - 20/07/2026 a 25/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [31, "W31 - 27/07/2026 a 01/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [32, "W32 - 03/08/2026 a 08/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [33, "W33 - 10/08/2026 a 15/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [34, "W34 - 17/08/2026 a 22/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [35, "W35 - 24/08/2026 a 29/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [36, "W36 - 31/08/2026 a 05/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [37, "W37 - 07/09/2026 a 12/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [38, "W38 - 14/09/2026 a 19/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [39, "W39 - 21/09/2026 a 26/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [40, "W40 - 28/09/2026 a 03/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [41, "W41 - 05/10/2026 a 10/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [42, "W42 - 12/10/2026 a 17/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [43, "W43 - 19/10/2026 a 24/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [44, "W44 - 26/10/2026 a 31/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [45, "W45 - 02/11/2026 a 07/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [46, "W46 - 09/11/2026 a 14/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [47, "W47 - 16/11/2026 a 21/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [48, "W48 - 23/11/2026 a 28/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [49, "W49 - 30/11/2026 a 05/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [50, "W50 - 07/12/2026 a 12/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [51, "W51 - 14/12/2026 a 19/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [52, "W52 - 21/12/2026 a 26/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null]], "SP25": [["Nº DA SEMANA", "PERÍODO DE VIGÊNCIA", "Felix Santos", "Guilherme Gonçalves de Oliveira", "Fabio Serafim", "CONCLUIDO", "ACUMULADO MENSAL"], [null, null, "felix.santos@shopeemobile-external.com", "guilherme.goliveira@shopee.com", "fabio.serafim@shopee.com", null, null], [1, "W1 - 29/12/2025 a 03/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [2, "W2 - 05/01/2026 a 10/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [3, "W3 - 12/01/2026 a 17/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [4, "W4 - 19/01/2026 a 24/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [5, "W5 - 26/01/2026 a 31/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [6, "W6 - 02/02/2026 a 07/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [7, "W7 - 09/02/2026 a 14/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [8, "W8 - 16/02/2026 a 21/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [9, "W9 - 23/02/2026 a 28/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [10, "W10 - 02/03/2026 a 07/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [11, "W11 - 09/03/2026 a 14/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [12, "W12 - 16/03/2026 a 21/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [13, "W13 - 23/03/2026 a 28/03/2026", "REALIZADO", "REALIZADO", "NÃO REALIZADO", 0.6666666667, 0.6666666667], [14, "W14 - 30/03/2026 a 04/04/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, 0.9333333333], [15, "W15 - 06/04/2026 a 11/04/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [16, "W16 - 13/04/2026 a 18/04/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [17, "W17 - 20/04/2026 a 25/04/2026", "REALIZADO", "REALIZADO", "NÃO REALIZADO", 0.6666666667, null], [18, "W18 - 27/04/2026 a 02/05/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [19, "W19 - 04/05/2026 a 09/05/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, 1], [20, "W20 - 11/05/2026 a 16/05/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [21, "W21 - 18/05/2026 a 23/05/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [22, "W22 - 25/05/2026 a 30/05/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [23, "W23 - 01/06/2026 a 06/06/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [24, "W24 - 08/06/2026 a 13/06/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [25, "W25 - 15/06/2026 a 20/06/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [26, "W26 - 22/06/2026 a 27/06/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [27, "W27 - 29/06/2026 a 04/07/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [28, "W28 - 06/07/2026 a 11/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [29, "W29 - 13/07/2026 a 18/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [30, "W30 - 20/07/2026 a 25/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [31, "W31 - 27/07/2026 a 01/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [32, "W32 - 03/08/2026 a 08/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [33, "W33 - 10/08/2026 a 15/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [34, "W34 - 17/08/2026 a 22/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [35, "W35 - 24/08/2026 a 29/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [36, "W36 - 31/08/2026 a 05/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [37, "W37 - 07/09/2026 a 12/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [38, "W38 - 14/09/2026 a 19/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [39, "W39 - 21/09/2026 a 26/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [40, "W40 - 28/09/2026 a 03/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [41, "W41 - 05/10/2026 a 10/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [42, "W42 - 12/10/2026 a 17/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [43, "W43 - 19/10/2026 a 24/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [44, "W44 - 26/10/2026 a 31/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [45, "W45 - 02/11/2026 a 07/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [46, "W46 - 09/11/2026 a 14/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [47, "W47 - 16/11/2026 a 21/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [48, "W48 - 23/11/2026 a 28/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [49, "W49 - 30/11/2026 a 05/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [50, "W50 - 07/12/2026 a 12/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [51, "W51 - 14/12/2026 a 19/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [52, "W52 - 21/12/2026 a 26/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null]], "BA2": [["Nº DA SEMANA", "PERÍODO DE VIGÊNCIA", "Rafhael Cabral", "Marcos Placido", "Caio Sandes", "CONCLUIDO", "ACUMULADO MENSAL"], [null, null, "rafhael.cabral@shopee.com", "marcos.placido@shopee.com", "caio.sandes@shopeemobile-external.com", null, null], [1, "W1 - 29/12/2025 a 03/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [2, "W2 - 05/01/2026 a 10/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [3, "W3 - 12/01/2026 a 17/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [4, "W4 - 19/01/2026 a 24/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [5, "W5 - 26/01/2026 a 31/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [6, "W6 - 02/02/2026 a 07/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [7, "W7 - 09/02/2026 a 14/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [8, "W8 - 16/02/2026 a 21/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [9, "W9 - 23/02/2026 a 28/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [10, "W10 - 02/03/2026 a 07/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [11, "W11 - 09/03/2026 a 14/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [12, "W12 - 16/03/2026 a 21/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [13, "W13 - 23/03/2026 a 28/03/2026", "-", "-", "-", 0, null], [14, "W14 - 30/03/2026 a 04/04/2026", "-", "-", "-", 0, null], [15, "W15 - 06/04/2026 a 11/04/2026", "-", "-", "-", 0, null], [16, "W16 - 13/04/2026 a 18/04/2026", "-", "-", "-", 0, null], [17, "W17 - 20/04/2026 a 25/04/2026", "-", "-", "-", 0, null], [18, "W18 - 27/04/2026 a 02/05/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [19, "W19 - 04/05/2026 a 09/05/2026", "REALIZADO", "REALIZADO", "NÃO REALIZADO", 0.6666666667, null], [20, "W20 - 11/05/2026 a 16/05/2026", "NÃO REALIZADO", "REALIZADO", "REALIZADO", 0.6666666667, null], [21, "W21 - 18/05/2026 a 23/05/2026", "NÃO REALIZADO", "REALIZADO", "NÃO REALIZADO", 0.3333333333, null], [22, "W22 - 25/05/2026 a 30/05/2026", "NÃO REALIZADO", "REALIZADO", "NÃO REALIZADO", 0.3333333333, null], [23, "W23 - 01/06/2026 a 06/06/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [24, "W24 - 08/06/2026 a 13/06/2026", "NÃO REALIZADO", "REALIZADO", "REALIZADO", 0.6666666667, null], [25, "W25 - 15/06/2026 a 20/06/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [26, "W26 - 22/06/2026 a 27/06/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [27, "W27 - 29/06/2026 a 04/07/2026", "NÃO REALIZADO", "REALIZADO", "NÃO REALIZADO", 0.3333333333, null], [28, "W28 - 06/07/2026 a 11/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [29, "W29 - 13/07/2026 a 18/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [30, "W30 - 20/07/2026 a 25/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [31, "W31 - 27/07/2026 a 01/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [32, "W32 - 03/08/2026 a 08/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [33, "W33 - 10/08/2026 a 15/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [34, "W34 - 17/08/2026 a 22/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [35, "W35 - 24/08/2026 a 29/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [36, "W36 - 31/08/2026 a 05/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [37, "W37 - 07/09/2026 a 12/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [38, "W38 - 14/09/2026 a 19/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [39, "W39 - 21/09/2026 a 26/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [40, "W40 - 28/09/2026 a 03/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [41, "W41 - 05/10/2026 a 10/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [42, "W42 - 12/10/2026 a 17/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [43, "W43 - 19/10/2026 a 24/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [44, "W44 - 26/10/2026 a 31/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [45, "W45 - 02/11/2026 a 07/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [46, "W46 - 09/11/2026 a 14/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [47, "W47 - 16/11/2026 a 21/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [48, "W48 - 23/11/2026 a 28/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [49, "W49 - 30/11/2026 a 05/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [50, "W50 - 07/12/2026 a 12/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [51, "W51 - 14/12/2026 a 19/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [52, "W52 - 21/12/2026 a 26/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null]], "PE2": [["Nº DA SEMANA", "PERÍODO DE VIGÊNCIA", "Jan Santos", "Almir Gomes", "Diego Enrique", "CONCLUIDO", "ACUMULADO MENSAL"], [null, null, "jan.santos@shopeemobile-external.com", "almir.gomes@shopeemobile-external.com", "diego.enrique@shopeemobile-external.com", null, null], [1, "W1 - 29/12/2025 a 03/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [2, "W2 - 05/01/2026 a 10/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [3, "W3 - 12/01/2026 a 17/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [4, "W4 - 19/01/2026 a 24/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [5, "W5 - 26/01/2026 a 31/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [6, "W6 - 02/02/2026 a 07/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [7, "W7 - 09/02/2026 a 14/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [8, "W8 - 16/02/2026 a 21/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [9, "W9 - 23/02/2026 a 28/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [10, "W10 - 02/03/2026 a 07/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [11, "W11 - 09/03/2026 a 14/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [12, "W12 - 16/03/2026 a 21/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [13, "W13 - 23/03/2026 a 28/03/2026", "-", "-", "-", 0, null], [14, "W14 - 30/03/2026 a 04/04/2026", "-", "-", "-", 0, null], [15, "W15 - 06/04/2026 a 11/04/2026", "-", "-", "-", 0, null], [16, "W16 - 13/04/2026 a 18/04/2026", "-", "-", "-", 0, null], [17, "W17 - 20/04/2026 a 25/04/2026", "-", "-", "-", 0, null], [18, "W18 - 27/04/2026 a 02/05/2026", "REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0.3333333333, null], [19, "W19 - 04/05/2026 a 09/05/2026", "REALIZADO", "NÃO REALIZADO", "REALIZADO", 0.6666666667, null], [20, "W20 - 11/05/2026 a 16/05/2026", "REALIZADO", "REALIZADO", "NÃO REALIZADO", 0.6666666667, null], [21, "W21 - 18/05/2026 a 23/05/2026", "NÃO REALIZADO", "REALIZADO", "REALIZADO", 0.6666666667, null], [22, "W22 - 25/05/2026 a 30/05/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [23, "W23 - 01/06/2026 a 06/06/2026", "REALIZADO", "REALIZADO", "NÃO REALIZADO", 0.6666666667, null], [24, "W24 - 08/06/2026 a 13/06/2026", "REALIZADO", "REALIZADO", "NÃO REALIZADO", 0.6666666667, null], [25, "W25 - 15/06/2026 a 20/06/2026", "REALIZADO", "REALIZADO", "NÃO REALIZADO", 0.6666666667, null], [26, "W26 - 22/06/2026 a 27/06/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [27, "W27 - 29/06/2026 a 04/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [28, "W28 - 06/07/2026 a 11/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [29, "W29 - 13/07/2026 a 18/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [30, "W30 - 20/07/2026 a 25/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [31, "W31 - 27/07/2026 a 01/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [32, "W32 - 03/08/2026 a 08/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [33, "W33 - 10/08/2026 a 15/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [34, "W34 - 17/08/2026 a 22/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [35, "W35 - 24/08/2026 a 29/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [36, "W36 - 31/08/2026 a 05/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [37, "W37 - 07/09/2026 a 12/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [38, "W38 - 14/09/2026 a 19/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [39, "W39 - 21/09/2026 a 26/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [40, "W40 - 28/09/2026 a 03/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [41, "W41 - 05/10/2026 a 10/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [42, "W42 - 12/10/2026 a 17/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [43, "W43 - 19/10/2026 a 24/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [44, "W44 - 26/10/2026 a 31/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [45, "W45 - 02/11/2026 a 07/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [46, "W46 - 09/11/2026 a 14/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [47, "W47 - 16/11/2026 a 21/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [48, "W48 - 23/11/2026 a 28/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [49, "W49 - 30/11/2026 a 05/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [50, "W50 - 07/12/2026 a 12/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [51, "W51 - 14/12/2026 a 19/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [52, "W52 - 21/12/2026 a 26/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null]], "GO2": [["Nº DA SEMANA", "PERÍODO DE VIGÊNCIA", "Leonardo Guimarães", "José Ricardo", "Cristiano Rodrigues", "CONCLUIDO", "ACUMULADO MENSAL"], [null, null, "leonardo.sguimaraes@shopeemobile-external.com", "jose.rnarcizio@shopeemobile-external.com", "cristiano.frodrigues@shopeemobile-external.com", null, null], [1, "W1 - 29/12/2025 a 03/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [2, "W2 - 05/01/2026 a 10/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [3, "W3 - 12/01/2026 a 17/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [4, "W4 - 19/01/2026 a 24/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [5, "W5 - 26/01/2026 a 31/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [6, "W6 - 02/02/2026 a 07/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [7, "W7 - 09/02/2026 a 14/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [8, "W8 - 16/02/2026 a 21/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [9, "W9 - 23/02/2026 a 28/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [10, "W10 - 02/03/2026 a 07/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [11, "W11 - 09/03/2026 a 14/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [12, "W12 - 16/03/2026 a 21/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [13, "W13 - 23/03/2026 a 28/03/2026", "-", "-", "-", 0, null], [14, "W14 - 30/03/2026 a 04/04/2026", "-", "-", "-", 0, null], [15, "W15 - 06/04/2026 a 11/04/2026", "-", "-", "-", 0, null], [16, "W16 - 13/04/2026 a 18/04/2026", "-", "-", "-", 0, null], [17, "W17 - 20/04/2026 a 25/04/2026", "-", "-", "-", 0, null], [18, "W18 - 27/04/2026 a 02/05/2026", "NÃO REALIZADO", "NÃO REALIZADO", "REALIZADO", 0.3333333333, null], [19, "W19 - 04/05/2026 a 09/05/2026", "NÃO REALIZADO", "NÃO REALIZADO", "REALIZADO", 0.3333333333, null], [20, "W20 - 11/05/2026 a 16/05/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [21, "W21 - 18/05/2026 a 23/05/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [22, "W22 - 25/05/2026 a 30/05/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [23, "W23 - 01/06/2026 a 06/06/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [24, "W24 - 08/06/2026 a 13/06/2026", null, "REALIZADO", "REALIZADO", 1, null], [25, "W25 - 15/06/2026 a 20/06/2026", null, "REALIZADO", "REALIZADO", 1, null], [26, "W26 - 22/06/2026 a 27/06/2026", null, "REALIZADO", "REALIZADO", 1, null], [27, "W27 - 29/06/2026 a 04/07/2026", "NÃO REALIZADO", "REALIZADO", "NÃO REALIZADO", 0.3333333333, null], [28, "W28 - 06/07/2026 a 11/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [29, "W29 - 13/07/2026 a 18/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [30, "W30 - 20/07/2026 a 25/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [31, "W31 - 27/07/2026 a 01/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [32, "W32 - 03/08/2026 a 08/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [33, "W33 - 10/08/2026 a 15/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [34, "W34 - 17/08/2026 a 22/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [35, "W35 - 24/08/2026 a 29/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [36, "W36 - 31/08/2026 a 05/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [37, "W37 - 07/09/2026 a 12/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [38, "W38 - 14/09/2026 a 19/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [39, "W39 - 21/09/2026 a 26/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [40, "W40 - 28/09/2026 a 03/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [41, "W41 - 05/10/2026 a 10/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [42, "W42 - 12/10/2026 a 17/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [43, "W43 - 19/10/2026 a 24/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [44, "W44 - 26/10/2026 a 31/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [45, "W45 - 02/11/2026 a 07/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [46, "W46 - 09/11/2026 a 14/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [47, "W47 - 16/11/2026 a 21/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [48, "W48 - 23/11/2026 a 28/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [49, "W49 - 30/11/2026 a 05/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [50, "W50 - 07/12/2026 a 12/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [51, "W51 - 14/12/2026 a 19/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [52, "W52 - 21/12/2026 a 26/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null]], "PR1": [["Nº DA SEMANA", "PERÍODO DE VIGÊNCIA", "Marcos Pires", null, "Sonny Gauer", "CONCLUIDO", "ACUMULADO MENSAL"], [null, null, "marcos.pires@shopeemobile-external.com", null, "sonny.gauer@shopeemobile-external.com", null, null], [1, "W1 - 29/12/2025 a 03/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [2, "W2 - 05/01/2026 a 10/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [3, "W3 - 12/01/2026 a 17/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [4, "W4 - 19/01/2026 a 24/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [5, "W5 - 26/01/2026 a 31/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [6, "W6 - 02/02/2026 a 07/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [7, "W7 - 09/02/2026 a 14/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [8, "W8 - 16/02/2026 a 21/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [9, "W9 - 23/02/2026 a 28/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [10, "W10 - 02/03/2026 a 07/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [11, "W11 - 09/03/2026 a 14/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [12, "W12 - 16/03/2026 a 21/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [13, "W13 - 23/03/2026 a 28/03/2026", "-", null, "-", 0, null], [14, "W14 - 30/03/2026 a 04/04/2026", "-", null, "-", 0, null], [15, "W15 - 06/04/2026 a 11/04/2026", "-", null, "-", 0, null], [16, "W16 - 13/04/2026 a 18/04/2026", "-", null, "-", 0, null], [17, "W17 - 20/04/2026 a 25/04/2026", "-", null, "-", 0, null], [18, "W18 - 27/04/2026 a 02/05/2026", "REALIZADO", null, "REALIZADO", 1, null], [19, "W19 - 04/05/2026 a 09/05/2026", "REALIZADO", null, "REALIZADO", 1, null], [20, "W20 - 11/05/2026 a 16/05/2026", "REALIZADO", null, "REALIZADO", 1, null], [21, "W21 - 18/05/2026 a 23/05/2026", "REALIZADO", null, "REALIZADO", 1, null], [22, "W22 - 25/05/2026 a 30/05/2026", "REALIZADO", null, "REALIZADO", 1, null], [23, "W23 - 01/06/2026 a 06/06/2026", "REALIZADO", null, "REALIZADO", 1, null], [24, "W24 - 08/06/2026 a 13/06/2026", "REALIZADO", null, "REALIZADO", 1, null], [25, "W25 - 15/06/2026 a 20/06/2026", "NÃO REALIZADO", null, "REALIZADO", 0.5, null], [26, "W26 - 22/06/2026 a 27/06/2026", "NÃO REALIZADO", null, "REALIZADO", 0.5, null], [27, "W27 - 29/06/2026 a 04/07/2026", "NÃO REALIZADO", null, "REALIZADO", 0.5, null], [28, "W28 - 06/07/2026 a 11/07/2026", "NÃO REALIZADO", null, "NÃO REALIZADO", 0, null], [29, "W29 - 13/07/2026 a 18/07/2026", "NÃO REALIZADO", null, "NÃO REALIZADO", 0, null], [30, "W30 - 20/07/2026 a 25/07/2026", "NÃO REALIZADO", null, "NÃO REALIZADO", 0, null], [31, "W31 - 27/07/2026 a 01/08/2026", "NÃO REALIZADO", null, "NÃO REALIZADO", 0, null], [32, "W32 - 03/08/2026 a 08/08/2026", "NÃO REALIZADO", null, "NÃO REALIZADO", 0, null], [33, "W33 - 10/08/2026 a 15/08/2026", "NÃO REALIZADO", null, "NÃO REALIZADO", 0, null], [34, "W34 - 17/08/2026 a 22/08/2026", "NÃO REALIZADO", null, "NÃO REALIZADO", 0, null], [35, "W35 - 24/08/2026 a 29/08/2026", "NÃO REALIZADO", null, "NÃO REALIZADO", 0, null], [36, "W36 - 31/08/2026 a 05/09/2026", "NÃO REALIZADO", null, "NÃO REALIZADO", 0, null], [37, "W37 - 07/09/2026 a 12/09/2026", "NÃO REALIZADO", null, "NÃO REALIZADO", 0, null], [38, "W38 - 14/09/2026 a 19/09/2026", "NÃO REALIZADO", null, "NÃO REALIZADO", 0, null], [39, "W39 - 21/09/2026 a 26/09/2026", "NÃO REALIZADO", null, "NÃO REALIZADO", 0, null], [40, "W40 - 28/09/2026 a 03/10/2026", "NÃO REALIZADO", null, "NÃO REALIZADO", 0, null], [41, "W41 - 05/10/2026 a 10/10/2026", "NÃO REALIZADO", null, "NÃO REALIZADO", 0, null], [42, "W42 - 12/10/2026 a 17/10/2026", "NÃO REALIZADO", null, "NÃO REALIZADO", 0, null], [43, "W43 - 19/10/2026 a 24/10/2026", "NÃO REALIZADO", null, "NÃO REALIZADO", 0, null], [44, "W44 - 26/10/2026 a 31/10/2026", "NÃO REALIZADO", null, "NÃO REALIZADO", 0, null], [45, "W45 - 02/11/2026 a 07/11/2026", "NÃO REALIZADO", null, "NÃO REALIZADO", 0, null], [46, "W46 - 09/11/2026 a 14/11/2026", "NÃO REALIZADO", null, "NÃO REALIZADO", 0, null], [47, "W47 - 16/11/2026 a 21/11/2026", "NÃO REALIZADO", null, "NÃO REALIZADO", 0, null], [48, "W48 - 23/11/2026 a 28/11/2026", "NÃO REALIZADO", null, "NÃO REALIZADO", 0, null], [49, "W49 - 30/11/2026 a 05/12/2026", "NÃO REALIZADO", null, "NÃO REALIZADO", 0, null], [50, "W50 - 07/12/2026 a 12/12/2026", "NÃO REALIZADO", null, "NÃO REALIZADO", 0, null], [51, "W51 - 14/12/2026 a 19/12/2026", "NÃO REALIZADO", null, "NÃO REALIZADO", 0, null], [52, "W52 - 21/12/2026 a 26/12/2026", "NÃO REALIZADO", null, "NÃO REALIZADO", 0, null]], "RJ1": [["Nº DA SEMANA", "PERÍODO DE VIGÊNCIA", "Iago Alves", "Carlos Bezerra", "Joao Cruz", "CONCLUIDO", "ACUMULADO MENSAL"], [null, null, "iago.alves@shopeemobile-external.com", "carlos.bezerra@shopee.com", "joao.cruz@shopeemobile-external.com", null, null], [1, "W1 - 29/12/2025 a 03/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [2, "W2 - 05/01/2026 a 10/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [3, "W3 - 12/01/2026 a 17/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [4, "W4 - 19/01/2026 a 24/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [5, "W5 - 26/01/2026 a 31/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [6, "W6 - 02/02/2026 a 07/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [7, "W7 - 09/02/2026 a 14/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [8, "W8 - 16/02/2026 a 21/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [9, "W9 - 23/02/2026 a 28/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [10, "W10 - 02/03/2026 a 07/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [11, "W11 - 09/03/2026 a 14/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [12, "W12 - 16/03/2026 a 21/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [13, "W13 - 23/03/2026 a 28/03/2026", "-", "-", "-", 0, null], [14, "W14 - 30/03/2026 a 04/04/2026", "-", "-", "-", 0, null], [15, "W15 - 06/04/2026 a 11/04/2026", "-", "-", "-", 0, null], [16, "W16 - 13/04/2026 a 18/04/2026", "-", "-", "-", 0, null], [17, "W17 - 20/04/2026 a 25/04/2026", "-", "-", "-", 0, null], [18, "W18 - 27/04/2026 a 02/05/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [19, "W19 - 04/05/2026 a 09/05/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [20, "W20 - 11/05/2026 a 16/05/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [21, "W21 - 18/05/2026 a 23/05/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [22, "W22 - 25/05/2026 a 30/05/2026", "NÃO REALIZADO", "REALIZADO", "REALIZADO", 0.6666666667, null], [23, "W23 - 01/06/2026 a 06/06/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [24, "W24 - 08/06/2026 a 13/06/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [25, "W25 - 15/06/2026 a 20/06/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [26, "W26 - 22/06/2026 a 27/06/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [27, "W27 - 29/06/2026 a 04/07/2026", "REALIZADO", "REALIZADO", "REALIZADO", 1, null], [28, "W28 - 06/07/2026 a 11/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [29, "W29 - 13/07/2026 a 18/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [30, "W30 - 20/07/2026 a 25/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [31, "W31 - 27/07/2026 a 01/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [32, "W32 - 03/08/2026 a 08/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [33, "W33 - 10/08/2026 a 15/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [34, "W34 - 17/08/2026 a 22/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [35, "W35 - 24/08/2026 a 29/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [36, "W36 - 31/08/2026 a 05/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [37, "W37 - 07/09/2026 a 12/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [38, "W38 - 14/09/2026 a 19/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [39, "W39 - 21/09/2026 a 26/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [40, "W40 - 28/09/2026 a 03/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [41, "W41 - 05/10/2026 a 10/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [42, "W42 - 12/10/2026 a 17/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [43, "W43 - 19/10/2026 a 24/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [44, "W44 - 26/10/2026 a 31/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [45, "W45 - 02/11/2026 a 07/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [46, "W46 - 09/11/2026 a 14/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [47, "W47 - 16/11/2026 a 21/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [48, "W48 - 23/11/2026 a 28/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [49, "W49 - 30/11/2026 a 05/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [50, "W50 - 07/12/2026 a 12/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [51, "W51 - 14/12/2026 a 19/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [52, "W52 - 21/12/2026 a 26/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null]], "ES1": [["Nº DA SEMANA", "PERÍODO DE VIGÊNCIA", "Carlos Santos", "Carlos Ribeiro", "Em contratação", "CONCLUIDO", "ACUMULADO MENSAL"], [null, null, "claudio.msantos@shopeemobile-external.com", "claudio.ribeiro@shopeemobile-external.com", "Em contratação", null, null], [1, "W1 - 29/12/2025 a 03/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [2, "W2 - 05/01/2026 a 10/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [3, "W3 - 12/01/2026 a 17/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [4, "W4 - 19/01/2026 a 24/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [5, "W5 - 26/01/2026 a 31/01/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [6, "W6 - 02/02/2026 a 07/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [7, "W7 - 09/02/2026 a 14/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [8, "W8 - 16/02/2026 a 21/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [9, "W9 - 23/02/2026 a 28/02/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [10, "W10 - 02/03/2026 a 07/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [11, "W11 - 09/03/2026 a 14/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [12, "W12 - 16/03/2026 a 21/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", "NÃO REALIZADO", 0, null], [13, "W13 - 23/03/2026 a 28/03/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [14, "W14 - 30/03/2026 a 04/04/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [15, "W15 - 06/04/2026 a 11/04/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [16, "W16 - 13/04/2026 a 18/04/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [17, "W17 - 20/04/2026 a 25/04/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [18, "W18 - 27/04/2026 a 02/05/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [19, "W19 - 04/05/2026 a 09/05/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [20, "W20 - 11/05/2026 a 16/05/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [21, "W21 - 18/05/2026 a 23/05/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [22, "W22 - 25/05/2026 a 30/05/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [23, "W23 - 01/06/2026 a 06/06/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [24, "W24 - 08/06/2026 a 13/06/2026", "REALIZADO", "REALIZADO", null, 1, null], [25, "W25 - 15/06/2026 a 20/06/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [26, "W26 - 22/06/2026 a 27/06/2026", "REALIZADO", "REALIZADO", null, 1, null], [27, "W27 - 29/06/2026 a 04/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [28, "W28 - 06/07/2026 a 11/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [29, "W29 - 13/07/2026 a 18/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [30, "W30 - 20/07/2026 a 25/07/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [31, "W31 - 27/07/2026 a 01/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [32, "W32 - 03/08/2026 a 08/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [33, "W33 - 10/08/2026 a 15/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [34, "W34 - 17/08/2026 a 22/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [35, "W35 - 24/08/2026 a 29/08/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [36, "W36 - 31/08/2026 a 05/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [37, "W37 - 07/09/2026 a 12/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [38, "W38 - 14/09/2026 a 19/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [39, "W39 - 21/09/2026 a 26/09/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [40, "W40 - 28/09/2026 a 03/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [41, "W41 - 05/10/2026 a 10/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [42, "W42 - 12/10/2026 a 17/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [43, "W43 - 19/10/2026 a 24/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [44, "W44 - 26/10/2026 a 31/10/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [45, "W45 - 02/11/2026 a 07/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [46, "W46 - 09/11/2026 a 14/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [47, "W47 - 16/11/2026 a 21/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [48, "W48 - 23/11/2026 a 28/11/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [49, "W49 - 30/11/2026 a 05/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [50, "W50 - 07/12/2026 a 12/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [51, "W51 - 14/12/2026 a 19/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null], [52, "W52 - 21/12/2026 a 26/12/2026", "NÃO REALIZADO", "NÃO REALIZADO", null, 0, null]]};
+const DEFAULT_TIMESTAMP = "04/07/2026 às 12:00 (dados da última planilha enviada)";
+
+const UNIT_SHEETS = ["RJ2","SP2","SP5","SP6","SP7","SP8","SP25","BA2","PE2","GO2","PR1","RJ1","ES1"];
+
+/* ============ PARSER: transforma abas cruas em modelo do painel ============ */
+function isNum(v){ return typeof v === "number" && !isNaN(v); }
+
+function buildUnitMeta(sheets){
+  const meta = {};
+  const rows = sheets["Relação de Líderes Pátio"] || [];
+  for(let i=1;i<rows.length;i++){
+    const r = rows[i];
+    if(!r || !r[0]) continue;
+    const soc = String(r[0]).trim();
+    const sortCode = r[1] ? String(r[1]).trim() : null;
+    if(!meta[soc]) meta[soc] = { sortCode: sortCode, leaders: [] };
+    if(sortCode && !meta[soc].sortCode) meta[soc].sortCode = sortCode;
+  }
+  return meta;
+}
+
+function parseUnitSheet(rows){
+  if(!rows || rows.length < 2) return null;
+  const header = rows[0];
+  const nCols = header.length;
+  const leaderCols = [];
+  for(let c=2;c<nCols-2;c++){
+    const name = header[c];
+    if(name && !String(name).startsWith("Unnamed")) leaderCols.push(c);
+  }
+  const weeks = [];
+  for(let i=1;i<rows.length;i++){
+    const r = rows[i];
+    if(!r || !isNum(r[0])) continue;
+    const statuses = leaderCols.map(c => ({ name: header[c], status: r[c] == null ? "-" : String(r[c]).trim() }));
+    weeks.push({
+      numSemana: r[0],
+      periodo: r[1],
+      statuses: statuses,
+      concluido: isNum(r[nCols-2]) ? r[nCols-2] : null,
+      acumulado: isNum(r[nCols-1]) ? r[nCols-1] : null
+    });
+  }
+  return { leaderNames: leaderCols.map(c=>header[c]), weeks };
+}
+
+function buildModel(sheets){
+  const farolRows = sheets["Farol"];
+  const header = farolRows[0];
+  const farolSocs = [];
+  for(let c=2;c<header.length-1;c++) farolSocs.push(header[c]);
+
+  const farol = [];
+  for(let i=1;i<farolRows.length;i++){
+    const r = farolRows[i];
+    if(!r || !isNum(r[0])) continue;
+    const units = {};
+    for(let c=2;c<header.length-1;c++) units[header[c]] = isNum(r[c]) ? r[c] : 0;
+    farol.push({ semana:r[0], mes:r[1], units:units, resultadoBR: isNum(r[header.length-1]) ? r[header.length-1] : null });
+  }
+
+  const unitMeta = buildUnitMeta(sheets);
+  const unitDetail = {};
+  UNIT_SHEETS.forEach(soc => {
+    const parsed = parseUnitSheet(sheets[soc]);
+    if(parsed) unitDetail[soc] = parsed;
+  });
+
+  // Unidades com aba própria e líderes cadastrados, mas ausentes na aba Farol
+  // (ex.: ES1) entram usando o CONCLUIDO calculado na própria aba da unidade.
+  const unitCols = farolSocs.slice();
+  UNIT_SHEETS.forEach(soc => {
+    if(unitCols.includes(soc)) return;
+    const detail = unitDetail[soc];
+    if(!detail || detail.leaderNames.length === 0) return;
+    unitCols.push(soc);
+    farol.forEach(row => {
+      const wk = detail.weeks.find(w => w.numSemana === row.semana);
+      row.units[soc] = (wk && wk.concluido != null) ? wk.concluido : 0;
+    });
+  });
+
+  // semana atual = última linha com alguma unidade > 0
+  let currentIdx = -1;
+  for(let i=farol.length-1;i>=0;i--){
+    const sum = Object.values(farol[i].units).reduce((a,b)=>a+b,0);
+    if(sum > 0){ currentIdx = i; break; }
+  }
+  if(currentIdx === -1) currentIdx = 0;
+
+  return {
+    unitCols, farol, currentIdx, unitMeta, unitDetail
+  };
+}
+
+/* ============ RENDER ============ */
+let rankChartRef = null;
+
+function pctColor(p){
+  if(p >= 1) return "var(--green)";
+  if(p >= 0.5) return "var(--amber)";
+  return "var(--red)";
+}
+function pctColorSolid(p){
+  if(p >= 1) return "#1E8E5A";
+  if(p >= 0.5) return "#C08A1E";
+  return "#C4392B";
+}
+function fmtPct(p){ return Math.round(p*100) + "%"; }
+
+function unitLabel(soc, meta){
+  const city = meta[soc] && meta[soc].sortCode ? meta[soc].sortCode : null;
+  return { soc, city };
+}
+
+function render(model){
+  const { unitCols, farol, currentIdx, unitMeta, unitDetail } = model;
+  const current = farol[currentIdx];
+  const previous = farol[currentIdx-1] || null;
+
+  const avg = row => {
+    const vals = Object.values(row.units);
+    return vals.reduce((a,b)=>a+b,0) / vals.length;
+  };
+  const curAvg = avg(current);
+  const prevAvg = previous ? avg(previous) : null;
+  const delta = prevAvg != null ? curAvg - prevAvg : null;
+
+  const unitsAt100 = unitCols.filter(u => current.units[u] >= 1).length;
+  const unitsAtRisk = unitCols.filter(u => current.units[u] < 0.5).length;
+
+  let lastBR = null, lastBRWeek = null;
+  for(let i=currentIdx;i>=0;i--){
+    if(farol[i].resultadoBR != null){ lastBR = farol[i].resultadoBR; lastBRWeek = farol[i].semana; break; }
+  }
+
+  // KPIs
+  const kpiGrid = document.getElementById("kpiGrid");
+  kpiGrid.innerHTML = `
+    <div class="kpi">
+      <div class="kpi-label">Realização — semana atual</div>
+      <div class="kpi-value" style="color:${pctColor(curAvg)}">${fmtPct(curAvg)}</div>
+      <div class="kpi-sub ${delta==null?'':(delta>=0?'up':'down')}">
+        ${delta==null ? "sem semana anterior para comparar" : (delta>=0?"▲ ":"▼ ") + fmtPct(Math.abs(delta)) + " vs. semana anterior"}
+      </div>
+      <span class="kpi-week-tag">Semana ${current.semana} · ${current.mes}</span>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Unidades com 100%</div>
+      <div class="kpi-value">${unitsAt100}<span style="font-size:16px;color:var(--ink-soft);font-weight:600;">/${unitCols.length}</span></div>
+      <div class="kpi-sub">realizaram o DSSMA com todos os líderes</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Unidades em atenção</div>
+      <div class="kpi-value" style="color:${unitsAtRisk>0?'var(--red)':'var(--ink)'}">${unitsAtRisk}</div>
+      <div class="kpi-sub">abaixo de 50% de realização na semana</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Resultado BR mais recente</div>
+      <div class="kpi-value">${lastBR!=null ? fmtPct(lastBR) : "—"}</div>
+      <div class="kpi-sub">${lastBRWeek!=null ? "referente à semana " + lastBRWeek : "ainda sem fechamento"}</div>
+    </div>
+  `;
+
+  // Ranking em barras
+  document.getElementById("rankWeekNote").textContent = "Semana " + current.semana + " · " + current.mes;
+  const sorted = unitCols.map(soc => ({ soc, pct: current.units[soc] })).sort((a,b)=>a.pct-b.pct);
+  const rankLabels = sorted.map(u => u.soc);
+  const rankColors = sorted.map(u => pctColorSolid(u.pct));
+  const rankValues = sorted.map(u => Math.round(u.pct*1000)/10);
+
+  const wrap = document.getElementById("rankChartWrap");
+  wrap.style.height = "340px";
+  const rctx = document.getElementById("rankChart");
+  if(rankChartRef) rankChartRef.destroy();
+  rankChartRef = new Chart(rctx, {
+    type: "bar",
+    data: {
+      labels: rankLabels,
+      datasets: [{
+        data: rankValues,
+        backgroundColor: rankColors,
+        borderRadius: 5,
+        barPercentage: 0.65,
+        categoryPercentage: 0.8
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display:false },
+        tooltip: { callbacks: { label: ctx => ctx.parsed.y + "% de realização" } }
+      },
+      scales: {
+        y: { min:0, max:100, ticks: { callback:v=>v+"%" }, grid:{ color:"#EDEEEA" } },
+        x: { grid:{ display:false }, ticks:{ font:{ size:12, weight:600 } } }
+      }
+    }
+  });
+
+  // Heatmap — last 8 weeks
+  const hmStart = Math.max(0, currentIdx-7);
+  const hmSlice = farol.slice(hmStart, currentIdx+1);
+  const table = document.getElementById("heatmapTable");
+  let thead = "<tr><th style='text-align:left;'>Unidade</th>" + hmSlice.map(r=>`<th>W${r.semana}</th>`).join("") + "</tr>";
+  let tbody = unitCols.map(soc => {
+    const lbl = unitLabel(soc, unitMeta);
+    const cells = hmSlice.map(r => {
+      const p = r.units[soc];
+      return `<td><span class="cell" style="background:${pctColorSolid(p)}">${Math.round(p*100)}</span></td>`;
+    }).join("");
+    return `<tr><td class="unit-name">${lbl.soc}${lbl.city?`<span class="unit-city">${lbl.city}</span>`:""}</td>${cells}</tr>`;
+  }).join("");
+  table.innerHTML = thead + tbody;
+
+  // Leader detail accordions
+  const acc = document.getElementById("unitAccordions");
+  acc.innerHTML = unitCols.map(soc => {
+    const detail = unitDetail[soc];
+    const lbl = unitLabel(soc, unitMeta);
+    const pct = current.units[soc];
+    const badgeClass = pct >= 1 ? "ok" : pct >= 0.5 ? "warn" : "bad";
+    let bodyHtml = `<div class="empty-note">Sem detalhe por líder disponível para esta unidade.</div>`;
+    if(detail){
+      const wk = detail.weeks.find(w => w.numSemana === current.semana);
+      if(wk){
+        bodyHtml = wk.statuses.map(s => {
+          const st = (s.status||"").toUpperCase();
+          let cls = "na", txt = "N/D";
+          if(st === "REALIZADO"){ cls="done"; txt="Realizado"; }
+          else if(st === "NÃO REALIZADO" || st === "NAO REALIZADO"){ cls="pending"; txt="Não realizado"; }
+          else if(st === "-" || st === "EM CONTRATAÇÃO"){ cls="na"; txt = st === "-" ? "Sem registro" : "Em contratação"; }
+          return `<div class="leader-row"><span>${s.name}</span><span class="status-tag ${cls}">${txt}</span></div>`;
+        }).join("");
+      } else {
+        bodyHtml = `<div class="empty-note">Sem dados para a semana ${current.semana} nesta unidade.</div>`;
+      }
+    }
+    return `
+      <div class="unit-accordion">
+        <div class="unit-summary" onclick="this.parentElement.classList.toggle('open')">
+          <div class="unit-summary-left">
+            <div>
+              <div class="unit-summary-title">${lbl.soc}</div>
+              ${lbl.city?`<div class="unit-summary-city">${lbl.city}</div>`:""}
+            </div>
+            <span class="badge ${badgeClass}">${fmtPct(pct)}</span>
+          </div>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="unit-body">${bodyHtml}</div>
+      </div>`;
+  }).join("");
+}
+
+function setUpdatedText(ts){
+  document.getElementById("updatedText").textContent = "Atualizado em " + ts;
+}
+
+/* ============ INICIALIZAÇÃO ============ */
+try{
+  const model = buildModel(DEFAULT_WORKBOOK);
+  render(model);
+  setUpdatedText(DEFAULT_TIMESTAMP);
+}catch(e){
+  document.getElementById("kpiGrid").innerHTML = `<div class="empty-note">Não foi possível carregar os dados iniciais. Use "Atualizar dados" para enviar a planilha.</div>`;
+  console.error(e);
+}
+
+/* ============ UPLOAD DE NOVO EXCEL ============ */
+document.getElementById("fileInput").addEventListener("change", function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt){
+    try{
+      const data = new Uint8Array(evt.target.result);
+      const wb = XLSX.read(data, { type: "array" });
+      const sheets = {};
+      wb.SheetNames.forEach(name => {
+        sheets[name] = XLSX.utils.sheet_to_json(wb.Sheets[name], { header:1, defval:null, raw:true });
+      });
+      const model = buildModel(sheets);
+      render(model);
+      const now = new Date();
+      setUpdatedText(now.toLocaleDateString("pt-BR") + " às " + now.toLocaleTimeString("pt-BR", {hour:"2-digit",minute:"2-digit"}));
+    }catch(err){
+      alert("Não consegui ler esse arquivo. Confirme se é a planilha exportada do Google Sheets com as abas 'Farol' e das unidades (RJ2, SP2, etc).");
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+});
+</script>
+</body>
+</html>
